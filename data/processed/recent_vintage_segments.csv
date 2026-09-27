@@ -1,0 +1,18 @@
+segment_type,segment_value,n,n_with_benchmark,mean_vs_levelten,status
+Region,CAISO,21,21,-18.18865616497977,reliable
+Region,ISO-NE,1,1,,too few projects
+Region,MISO,13,13,-13.797085560188698,reliable
+Region,NYISO,12,0,,benchmark unavailable for this region
+Region,PJM,15,15,-28.58947163196945,reliable
+Region,SPP,2,2,,too few projects
+Region,Southeast (non-ISO),9,0,,benchmark unavailable for this region
+Region,West (non-ISO),34,0,,benchmark unavailable for this region
+Offtaker Type,Corporate,15,8,-33.35046000810979,reliable
+Offtaker Type,Investor-owned Utility,31,11,-11.004384366378385,reliable
+Offtaker Type,Investor-owned Utility and Corporate,1,0,,too few projects
+Offtaker Type,Merchant,2,2,,too few projects
+Offtaker Type,Monopoly Investor-owned Utility,10,5,-16.464912019462,reliable
+Offtaker Type,Non-IOU Retailer,2,2,,too few projects
+Offtaker Type,Public Utilities,36,19,-22.722127530856593,reliable
+Offtaker Type,Public Utilities and Corporate,2,2,,too few projects
+Offtaker Type,Unknown,8,3,,benchmark unavailable for this region
