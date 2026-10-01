@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/32881956/README.1.md)
+[README.md](https://github.com/user-attachments/files/32881956/README.md)
 # Solar PPA Pricing & Discounting Analysis
 
 **One-line hook:**
