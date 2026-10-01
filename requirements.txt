@@ -3,3 +3,6 @@ pandas
 openpyxl
 python-dotenv
 matplotlib
+notebook
+ipykernel
+duckdb
