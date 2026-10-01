@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/32712818/README.md)
+[README (1).md](https://github.com/user-attachments/files/32881956/README.1.md)
 # Solar PPA Pricing & Discounting Analysis
 
 **One-line hook:**
@@ -20,20 +20,35 @@ valuable than the original benchmark question itself.
 
 ![Pipeline architecture](images/architecture.svg)
 
+## Quick start
+
+```bash
+pip install -r requirements.txt
+python src/run_all.py
+```
+
+Runs the whole pipeline end to end: download, clean, join, analyze, and cross-check the results
+against an independent SQL implementation. Skips the 54 MB download if the workbook is already
+present (`--force-download` to re-pull). Stops at the first failure rather than continuing with
+incomplete data. The step-by-step breakdown is in [Build order](#build-order) below.
+
 ## Technology Used
 
 - **Python** — extraction, cleaning, and analysis
 - **Pandas** — filtering, joins, and segment-level aggregation
-- **openpyxl** — reading a 59-tab, 54 MB Excel workbook directly, including tabs with merged
+- **SQL (DuckDB)** — the segmentation logic reimplemented independently as a SQL query, then
+  diffed against the pandas result (`sql/pricing_segments.sql`). Two implementations agreeing
+  is a stronger correctness signal than one looking plausible.
+- **openpyxl** — reading a 59-tab, ~57 MB Excel workbook directly, including tabs with merged
   headers and literal Excel formula-error strings that needed explicit cleaning
 - **Matplotlib** — the vintage price-trend chart
-- **Jupyter Notebook** — the consolidated, reproducible analysis
+- **Jupyter Notebook** — the consolidated, reproducible walkthrough
 
 ## Dataset Used
 
 | Source | What | Frequency | Notes |
 |---|---|---|---|
-| **LBNL Utility-Scale Solar, 2025 Edition** (`data.openei.org/submissions/8541`) | PPA prices, CapEx, LCOE, capacity factors, by project/region/technology/vintage | Annual, 1,775 projects through 2024 | Genuinely structured, not prose — CC BY 4.0 licensed. 54.31 MB — not committed to git, downloaded locally instead. |
+| **LBNL Utility-Scale Solar, 2025 Edition** (`data.openei.org/submissions/8541`) | PPA prices, CapEx, LCOE, capacity factors, by project/region/technology/vintage | Annual, 1,775 projects through 2024 | Genuinely structured, not prose — CC BY 4.0 licensed. ~57 MB (OpenEI's page lists 54.31 MB; the actual download measured 56.9 MB) — not committed to git, downloaded on demand instead. |
 | **LevelTen & Trio 2024 PPA Index** (same workbook) | Regional market-price benchmark, 7 organized ISO/RTO markets | Annual (2024) | Confirmed directly against LevelTen's own published methodology: a **P25 index of developer-submitted offer prices**, not realized deal prices — the central finding of this project. |
 
 Only **24% of PV projects (425 of 1,759)** disclose a PPA price at all — utility self-build
@@ -53,6 +68,9 @@ subset specifically, not the full market.
 - **Every reliably-sized, vintage-matched segment still showed a $11–33/MWh gap below
   benchmark** — traced to a benchmark-methodology mismatch (asking price vs. realized price),
   confirmed against the index provider's own documentation, not a pricing-skill finding.
+- **Validated two ways**: the pandas and SQL implementations agree on all 17 segments, with a
+  maximum difference of $0.005/MWh (rounding) and identical status classifications, including
+  the edge cases.
 - Full reproducible analysis: [`notebooks/01_ppa_pricing_analysis.ipynb`](notebooks/01_ppa_pricing_analysis.ipynb)
 
 ---
@@ -75,6 +93,8 @@ prepare pricing analysis for executive consumption).
 - Segment comparisons explicitly flag groups with fewer than 5 projects as unreliable, and
   separately flag regions where the benchmark itself is unavailable, rather than conflating
   the two.
+- The segmentation was then reimplemented independently in SQL and diffed against the pandas
+  result — see [Validation](#validation).
 
 ## Key findings
 1. **PPA prices fell dramatically by vintage, tracking LCOE closely** — see Results above.
@@ -84,11 +104,11 @@ prepare pricing analysis for executive consumption).
    — documented as a methodology fix, not hidden as if the corrected analysis were the only
    one ever run.
 4. **Even after restricting to matching-vintage (2022–2024) projects, every reliably-sized
-   segment priced $11–33/MWh below the LevelTen/Trio benchmark** — CAISO (−$18, n=21), MISO
-   (−$14, n=13), PJM (−$29, n=15) by region; Corporate (−$33, n=8), Investor-owned Utility
-   (−$11, n=11), Monopoly IOU (−$16, n=5), and Public Utilities (−$23, n=19) by offtaker type.
-   The consistency across every single segment — not scattered around zero — is itself the
-   signal that something structural, not deal-specific, was driving the gap.
+   segment priced $11–33/MWh below the LevelTen/Trio benchmark** — CAISO (−$18.19, n=21), MISO
+   (−$13.80, n=13), PJM (−$28.59, n=15) by region; Corporate (−$33.35, n=8), Investor-owned
+   Utility (−$11.00, n=11), Monopoly IOU (−$16.46, n=5), and Public Utilities (−$22.72, n=19)
+   by offtaker type. The consistency across every single segment — not scattered around zero —
+   is itself the signal that something structural, not deal-specific, was driving the gap.
 5. **The diagnosis: this is a benchmark-methodology artifact, not a pricing finding.**
    Confirmed directly against LevelTen's own published methodology: their index is built from
    developer-*submitted offer* prices (the P25 — the more aggressive end of the offer
@@ -106,14 +126,34 @@ prepare pricing analysis for executive consumption).
 - **State the disclosure rate up front in any summary.** With only 24% of projects disclosing
   a price, say so explicitly rather than letting a reader assume full market coverage.
 
+## Validation
+
+The segment analysis exists twice, written independently: once in pandas
+(`src/analyze_pricing.py`) and once in SQL (`sql/pricing_segments.sql`).
+`src/run_sql_analysis.py` runs both and diffs them, reporting exactly where they disagree
+rather than quietly preferring one. Current result on the real data:
+
+```
+Segment lists match: 17 segments in both.
+Max absolute difference in mean_vs_levelten: 0.004912 (PASS, tolerance 0.01)
+Status classifications agree on all 17 segments.
+```
+
+The remaining $0.005 difference is the SQL's `ROUND(..., 2)` versus pandas' full precision, not
+a logic difference. The status agreement matters more than the means: both implementations
+independently classify NYISO as "benchmark unavailable" rather than "too few projects," which
+is the edge case most likely to be silently wrong in only one of them.
+
 ## Limitations & assumptions
 - CSP plants excluded (16 of 1,775 projects) — PPA structure isn't directly comparable to PV.
 - 184 of 425 disclosed-price projects (43%) are in regions with no matching third-party
   benchmark at all (`West (non-ISO)`, `Southeast (non-ISO)`, `HI`).
 - **NYISO's own benchmark value is an Excel formula error in LBNL's source workbook**
-  (`#N/A` for both LevelTen and Trio) — genuinely unavailable, not a small-sample issue.
+  (`#N/A` for both LevelTen and Trio) — genuinely unavailable, not a small-sample issue. 12
+  NYISO projects had enough sample size to analyze but no benchmark to compare against.
 - Segment sample sizes are modest even after restricting to matching-vintage projects (n=5 to
-  n=21 for the segments reported).
+  n=21 for the segments reported) — real numbers, but not large enough to support strong
+  causal claims about *why* any particular segment's gap is larger or smaller.
 - This is a public-data analog for a deal-pricing problem, not real negotiated deal data with
   actual win/loss outcomes — there's no "lost deal" in this dataset, only completed projects.
 
@@ -124,30 +164,42 @@ solar-ppa-pricing/
 ├── requirements.txt
 ├── .gitignore                    # excludes data/raw/*.xlsx (too large to commit)
 ├── src/
+│   ├── run_all.py                # runs the whole pipeline in order — start here
 │   ├── download_lbnl_data.py     # downloads the confirmed source file → data/raw/
 │   ├── inspect_tabs.py           # lists every tab name + shape, before deciding what to load
 │   ├── peek_raw_rows.py          # diagnostic: prints raw rows to find real header locations
 │   ├── explore_key_tabs.py       # full column/dtype/sample-row dump of the two key tabs
 │   ├── load_benchmark_index.py   # cleans the LevelTen/Trio tab (merged header, Excel errors)
 │   ├── build_pricing_table.py    # filters + joins project data against the benchmark
-│   └── analyze_pricing.py        # vintage trend chart + recent-vintage segment breakdown
+│   ├── analyze_pricing.py        # vintage trend chart + recent-vintage segment breakdown
+│   └── run_sql_analysis.py       # runs the SQL version and diffs it against pandas
+├── sql/
+│   └── pricing_segments.sql      # vintage-matched segmentation as a SQL query
 ├── images/
 │   └── architecture.svg          # pipeline diagram used above
 ├── data/
 │   ├── raw/                      # downloaded workbook (gitignored)
 │   └── processed/                # pricing_table.csv, recent_vintage_segments.csv, charts
 └── notebooks/
-    └── 01_ppa_pricing_analysis.ipynb  # consolidated, reproducible walkthrough of everything above
+    └── 01_ppa_pricing_analysis.ipynb  # consolidated, reproducible walkthrough
 ```
 
 ## Build order
+
+`python src/run_all.py` does steps 1 and 4–7 in sequence. The individual steps, for reference:
+
 1. `python src/download_lbnl_data.py` — pulls the confirmed source file.
-2. `python src/inspect_tabs.py` — list all tabs before guessing which to load.
-3. `python src/peek_raw_rows.py "LevelTen & Trio 2024 PPA Index"` — find the real header
-   location for the messy benchmark tab.
+2. `python src/inspect_tabs.py` — lists all 59 tabs before guessing which to load. One-time
+   exploration, not part of the pipeline.
+3. `python src/peek_raw_rows.py "LevelTen & Trio 2024 PPA Index"` — finds the real header
+   location in the messy benchmark tab. Also one-time.
 4. `python src/load_benchmark_index.py` — clean loader for the benchmark.
-5. `python src/build_pricing_table.py` — join project data to the benchmark.
-6. `python src/analyze_pricing.py` — vintage trend + recent-vintage segment breakdown.
-7. `notebooks/01_ppa_pricing_analysis.ipynb` — consolidates everything above into one
-   reproducible walkthrough, including the naive-comparison mistake shown deliberately
-   before its fix, and the benchmark-methodology diagnosis as the final section.
+5. `python src/build_pricing_table.py` — joins project data to the benchmark, printing filter
+   counts and unmatched regions explicitly.
+6. `python src/analyze_pricing.py` — vintage trend chart + segment breakdown, with thin
+   segments and missing-benchmark regions explicitly flagged.
+7. `python src/run_sql_analysis.py` — runs the SQL implementation and diffs it against the
+   pandas output.
+8. `notebooks/01_ppa_pricing_analysis.ipynb` — consolidates everything into one reproducible
+   walkthrough, including the naive-comparison mistake shown deliberately before its fix, and
+   the benchmark-methodology diagnosis as the final section.
