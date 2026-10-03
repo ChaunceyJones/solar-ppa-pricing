@@ -6,7 +6,7 @@
 > but that gap turned out to be a methodology artifact (a signed deal price compared against a
 > developer *offer* index), not evidence these deals were priced better than the market.
 
-📊 [Presentation deck (PDF)](https://chaunceyjones.github.io/decks/solar-ppa-pricing.pdf) ·
+📊 [Presentation deck](https://chaunceyjones.github.io/decks/solar-ppa-pricing.html) ·
 🌐 [Portfolio site](https://chaunceyjones.github.io) ·
 📁 [All projects](https://github.com/ChaunceyJones/Chaunceys_Portfolio)
 
