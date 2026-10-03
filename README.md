@@ -6,6 +6,10 @@
 > but that gap turned out to be a methodology artifact (a signed deal price compared against a
 > developer *offer* index), not evidence these deals were priced better than the market.
 
+📊 [Presentation deck (PDF)](https://chaunceyjones.github.io/decks/solar-ppa-pricing.pdf) ·
+🌐 [Portfolio site](https://chaunceyjones.github.io) ·
+📁 [All projects](https://github.com/ChaunceyJones/Chaunceys_Portfolio)
+
 ## Introduction
 
 Is a given solar power purchase agreement (PPA) priced well relative to the market — and can a
